@@ -1,0 +1,187 @@
+import timeit
+
+# Implementarea algoritmului Boyer-Moore
+def boyer_moore(text, pattern):
+    def preprocess_strong_suffix(shift, bpos, pat, m):
+        i, j = m, m + 1
+        bpos[i] = j
+        while i > 0:
+            while j <= m and pat[i - 1] != pat[j - 1]:
+                if shift[j] == 0:
+                    shift[j] = j - i
+                j = bpos[j]
+            i -= 1
+            j -= 1
+            bpos[i] = j
+
+    def preprocess_case2(shift, bpos, m):
+        j = bpos[0]
+        for i in range(m + 1):
+            if shift[i] == 0:
+                shift[i] = j
+            if i == j:
+                j = bpos[j]
+
+    def search(txt, pat):
+        n, m = len(txt), len(pat)
+        bpos = [0] * (m + 1)
+        shift = [0] * (m + 1)
+        preprocess_strong_suffix(shift, bpos, pat, m)
+        preprocess_case2(shift, bpos, m)
+        s = 0
+        while s <= n - m:
+            j = m - 1
+            while j >= 0 and pat[j] == txt[s + j]:
+                j -= 1
+            if j < 0:
+                return s
+                s += shift[0]
+            else:
+                s += shift[j + 1]
+        return -1
+
+    return search(text, pattern)
+
+# Implementarea algoritmului Knuth-Morris-Pratt
+def knuth_morris_pratt(text, pattern):
+    def kmp_search(pat, txt):
+        M, N = len(pat), len(txt)
+        lps = [0] * M
+        j = 0
+        compute_lps_array(pat, M, lps)
+        i = 0
+        while i < N:
+            if pat[j] == txt[i]:
+                i += 1
+                j += 1
+            if j == M:
+                return i - j
+                j = lps[j - 1]
+            elif i < N and pat[j] != txt[i]:
+                if j != 0:
+                    j = lps[j - 1]
+                else:
+                    i += 1
+        return -1
+
+    def compute_lps_array(pat, M, lps):
+        length = 0
+        lps[0] = 0
+        i = 1
+        while i < M:
+            if pat[i] == pat[length]:
+                length += 1
+                lps[i] = length
+                i += 1
+            else:
+                if length != 0:
+                    length = lps[length - 1]
+                else:
+                    lps[i] = 0
+                    i += 1
+
+    return kmp_search(pattern, text)
+
+# Implementarea algoritmului Rabin-Karp
+def rabin_karp(text, pattern, q=101):
+    d = 256
+    M = len(pattern)
+    N = len(text)
+    p = 0
+    t = 0
+    h = 1
+    for i in range(M - 1):
+        h = (h * d) % q
+    for i in range(M):
+        p = (d * p + ord(pattern[i])) % q
+        t = (d * t + ord(text[i])) % q
+    for i in range(N - M + 1):
+        if p == t:
+            if text[i:i + M] == pattern:
+                return i
+        if i < N - M:
+            t = (d * (t - ord(text[i]) * h) + ord(text[i + M])) % q
+            if t < 0:
+                t += q
+    return -1
+
+# Text de exemplu și subșiruri de căutat
+text_example = "This is a sample text for testing substring search algorithms. It includes multiple examples and some repetitions."
+substrings = {
+    'existing': 'substring search',
+    'non_existing': 'quantum physics'
+}
+
+# Funcții pentru măsurători timeit
+def bm_existing():
+    boyer_moore(text_example, substrings['existing'])
+
+def kmp_existing():
+    knuth_morris_pratt(text_example, substrings['existing'])
+
+def rk_existing():
+    rabin_karp(text_example, substrings['existing'])
+
+def bm_non_existing():
+    boyer_moore(text_example, substrings['non_existing'])
+
+def kmp_non_existing():
+    knuth_morris_pratt(text_example, substrings['non_existing'])
+
+def rk_non_existing():
+    rabin_karp(text_example, substrings['non_existing'])
+
+# Măsurarea timpilor de execuție folosind timeit
+results = {
+    'existing': {},
+    'non_existing': {}
+}
+
+results['existing']['Boyer-Moore'] = timeit.timeit(bm_existing, number=100)
+results['existing']['Knuth-Morris-Pratt'] = timeit.timeit(kmp_existing, number=100)
+results['existing']['Rabin-Karp'] = timeit.timeit(rk_existing, number=100)
+
+results['non_existing']['Boyer-Moore'] = timeit.timeit(bm_non_existing, number=100)
+results['non_existing']['Knuth-Morris-Pratt'] = timeit.timeit(kmp_non_existing, number=100)
+results['non_existing']['Rabin-Karp'] = timeit.timeit(rk_non_existing, number=100)
+
+print(results)
+
+
+
+
+Conclusions on the Speed ​​of Substring Search Algorithms
+Text: Example Article
+For the example text used, the execution times of the Boyer-Moore, Knuth-Morris-Pratt and Rabin-Karp algorithms for existing and non-existing substrings were analyzed. Here are the detailed findings:
+
+Existing Substrings
+Boyer-Moore:
+
+Execution time: 0.00169 s
+Remarks: The algorithm has been shown to be efficient in finding substrings, benefiting from the ability to skip large sections of text when it finds no partial matches.
+Knuth-Morris-Pratt (KMP):
+
+Execution time: 0.00131 s
+Remarks: It was the fastest of the algorithms tested for existing substrings due to the efficient construction of the LPS table, which reduces the number of comparisons.
+Rabin-Karp:
+
+Execution time: 0.00202 s
+Remarks: It was the slowest of the three, probably due to the overhead of calculating and comparing the hash values.
+Nonexistent Substrings
+Boyer-Moore:
+
+Execution time: 0.00219 s
+Remarks: It continued to be effective, showing a reasonable increase in execution time, but remaining faster than the other methods.
+Knuth-Morris-Pratt:
+
+Execution time: 0.00261 s
+Remarks: It was slower than Boyer-Moore but faster than Rabin-Karp, efficiently handling cases where there are no matches.
+Rabin-Karp:
+
+Execution time: 0.00337 s
+Remarks: It was again the slowest, especially for nonexistent substrings, due to the full check of all possible positions.
+General Conclusions
+Knuth-Morris-Pratt is preferred for searching existing substrings due to its speed, being ideal for large texts and cases where substrings are frequently present.
+Boyer-Moore is very efficient for searching for nonexistent substrings as well as existing substrings, with a good trade-off between execution speed and the number of comparisons required.
+Rabin-Karp, while more versatile in applicability, including for searching multiple substrings at once, is less efficient in general cases due to the extra time required to handle hash collisions and final checking.
+In conclusion, the choice of the optimal algorithm depends on the nature of the search (existing or non-existent) and the specific characteristics of the text and substring. Boyer-Moore and Knuth-Morris-Pratt are generally the fastest and most efficient options.
